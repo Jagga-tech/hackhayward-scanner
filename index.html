@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>HackHayward 2026 — Omi AI Pickup Scanner</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#07050f;--surface:#0e0b1a;--card:#13102a;
+  --purple:#7c3aed;--purple-light:#a78bfa;--purple-glow:#7c3aed55;
+  --gold:#f5a623;--gold-dim:#f5a62366;
+  --green:#22c55e;--green-dim:#22c55e33;
+  --red:#ef4444;--red-dim:#ef444433;
+  --text:#e2e0f0;--text-dim:#9994b8;
+  --font-head:'Syne',sans-serif;--font-mono:'Space Mono',monospace;
+}
+html,body{height:100%;overflow-x:hidden}
+body{
+  background:var(--bg);color:var(--text);font-family:var(--font-mono);
+  display:flex;flex-direction:column;align-items:center;
+  min-height:100vh;min-height:100dvh;position:relative;
+}
+
+/* ── stars ── */
+.stars,.stars2,.stars3{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0}
+.stars{background:radial-gradient(1px 1px at 10% 20%,#fff 0.5px,transparent 1px),radial-gradient(1px 1px at 30% 60%,#fff 0.5px,transparent 1px),radial-gradient(1.5px 1.5px at 50% 10%,#fff 0.8px,transparent 1px),radial-gradient(1px 1px at 70% 80%,#fff 0.5px,transparent 1px),radial-gradient(1px 1px at 90% 40%,#fff 0.5px,transparent 1px),radial-gradient(1.2px 1.2px at 15% 85%,#fff 0.6px,transparent 1px),radial-gradient(1px 1px at 55% 45%,#fff 0.5px,transparent 1px),radial-gradient(1.5px 1.5px at 80% 15%,#fff 0.8px,transparent 1px);animation:twinkle 4s ease-in-out infinite alternate}
+.stars2{background:radial-gradient(1px 1px at 5% 50%,rgba(255,255,255,.6) 0.5px,transparent 1px),radial-gradient(1px 1px at 25% 30%,rgba(255,255,255,.5) 0.5px,transparent 1px),radial-gradient(1px 1px at 45% 70%,rgba(255,255,255,.7) 0.5px,transparent 1px),radial-gradient(1px 1px at 65% 20%,rgba(255,255,255,.5) 0.5px,transparent 1px),radial-gradient(1px 1px at 85% 55%,rgba(255,255,255,.6) 0.5px,transparent 1px),radial-gradient(1px 1px at 40% 90%,rgba(255,255,255,.4) 0.5px,transparent 1px);animation:twinkle 6s ease-in-out 1s infinite alternate}
+.stars3{background:radial-gradient(1.5px 1.5px at 20% 40%,rgba(167,139,250,.4) 0.5px,transparent 1px),radial-gradient(1.5px 1.5px at 60% 75%,rgba(245,166,35,.3) 0.5px,transparent 1px),radial-gradient(1px 1px at 80% 30%,rgba(167,139,250,.3) 0.5px,transparent 1px),radial-gradient(1px 1px at 35% 65%,rgba(245,166,35,.25) 0.5px,transparent 1px);animation:twinkle 8s ease-in-out 2s infinite alternate}
+@keyframes twinkle{0%{opacity:.4}100%{opacity:1}}
+
+.container{width:100%;max-width:480px;padding:16px;position:relative;z-index:1;display:flex;flex-direction:column;min-height:100vh;min-height:100dvh}
+
+/* ── header ── */
+.header{text-align:center;padding:12px 0 8px}
+.logo{font-family:var(--font-head);font-weight:800;font-size:1.5rem;background:linear-gradient(135deg,var(--purple-light),var(--gold));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:-.02em}
+.subtitle{font-size:.65rem;color:var(--text-dim);margin-top:2px;text-transform:uppercase;letter-spacing:.15em}
+
+/* ── stats ── */
+.stats-bar{display:flex;gap:8px;margin:12px 0}
+.stat{flex:1;background:var(--surface);border:1px solid #1e1a3a;border-radius:12px;padding:10px 8px;text-align:center}
+.stat-num{font-family:var(--font-head);font-size:1.5rem;font-weight:700;line-height:1}
+.stat-num.purple{color:var(--purple-light)}
+.stat-num.gold{color:var(--gold)}
+.stat-num.green{color:var(--green)}
+.stat-label{font-size:.55rem;color:var(--text-dim);text-transform:uppercase;letter-spacing:.1em;margin-top:4px}
+
+/* ── password screen ── */
+.screen{display:none;flex-direction:column;align-items:center;flex:1}
+.screen.active{display:flex}
+.lock-icon{font-size:3rem;margin:40px 0 16px}
+.pw-title{font-family:var(--font-head);font-size:1.3rem;font-weight:700;margin-bottom:4px}
+.pw-sub{font-size:.7rem;color:var(--text-dim);margin-bottom:24px;text-align:center}
+.pw-input{width:100%;max-width:300px;padding:14px 16px;background:var(--surface);border:1.5px solid #2a2548;border-radius:12px;color:var(--text);font-family:var(--font-mono);font-size:.9rem;text-align:center;outline:none;transition:border .2s}
+.pw-input:focus{border-color:var(--purple)}
+.pw-input.error{border-color:var(--red);animation:shake .4s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.pw-btn{margin-top:16px;padding:14px 48px;background:linear-gradient(135deg,var(--purple),#6d28d9);border:none;border-radius:12px;color:#fff;font-family:var(--font-head);font-size:.95rem;font-weight:700;cursor:pointer;transition:transform .15s,box-shadow .15s}
+.pw-btn:active{transform:scale(.97)}
+.pw-btn:hover{box-shadow:0 0 30px var(--purple-glow)}
+
+/* ── scanner ── */
+.scanner-wrap{position:relative;width:100%;border-radius:16px;overflow:hidden;background:#000;margin:8px 0}
+#reader{width:100%!important}
+#reader video{object-fit:cover!important;border-radius:16px}
+#reader img[alt="Info icon"]{display:none!important}
+#reader div[style*="position: absolute"]{border-color:var(--gold)!important}
+/* Hide html5-qrcode default UI elements */
+#reader__scan_region{border-radius:16px;overflow:hidden}
+#reader__scan_region video{border-radius:16px}
+#reader__dashboard{display:none!important}
+#reader__header_message{display:none!important}
+#reader__scan_region img{display:none!important}
+#qr-shaded-region{display:none!important}
+#reader div[style*="border"]{border:none!important;box-shadow:none!important}
+.viewfinder{position:absolute;inset:15%;pointer-events:none;z-index:2}
+.vf-corner{position:absolute;width:24px;height:24px;border-color:var(--gold);border-style:solid;border-width:0}
+.vf-corner.tl{top:0;left:0;border-top-width:3px;border-left-width:3px;border-top-left-radius:6px}
+.vf-corner.tr{top:0;right:0;border-top-width:3px;border-right-width:3px;border-top-right-radius:6px}
+.vf-corner.bl{bottom:0;left:0;border-bottom-width:3px;border-left-width:3px;border-bottom-left-radius:6px}
+.vf-corner.br{bottom:0;right:0;border-bottom-width:3px;border-right-width:3px;border-bottom-right-radius:6px}
+.scan-line{position:absolute;left:15%;right:15%;height:2px;background:linear-gradient(90deg,transparent,var(--gold),transparent);box-shadow:0 0 12px var(--gold-dim);z-index:2;animation:scanMove 2.5s ease-in-out infinite}
+@keyframes scanMove{0%,100%{top:15%}50%{top:85%}}
+.scan-label{text-align:center;font-size:.65rem;color:var(--text-dim);margin:6px 0 4px}
+
+/* ── participant card ── */
+.card-wrap{overflow:hidden;transition:max-height .5s cubic-bezier(.4,0,.2,1),opacity .4s;max-height:0;opacity:0}
+.card-wrap.show{max-height:600px;opacity:1}
+.card{background:var(--card);border:1px solid #1e1a3a;border-radius:16px;padding:20px;margin:8px 0}
+.card-top{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.avatar{width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--purple),var(--gold));display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-weight:800;font-size:1.1rem;color:#fff;flex-shrink:0}
+.card-name{font-family:var(--font-head);font-size:1.15rem;font-weight:700}
+.card-uni{font-size:.7rem;color:var(--text-dim);margin-top:2px}
+.card-fields{display:flex;flex-direction:column;gap:10px}
+.field{display:flex;justify-content:space-between;align-items:center;padding:8px 12px;background:rgba(255,255,255,.03);border-radius:8px}
+.field-label{font-size:.6rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim)}
+.field-value{font-size:.78rem;color:var(--text);text-align:right;word-break:break-all}
+.status-badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:.65rem;font-weight:700;font-family:var(--font-head)}
+.status-badge.pending{background:var(--gold-dim);color:var(--gold)}
+.status-badge.picked{background:var(--green-dim);color:var(--green)}
+.status-badge .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+
+/* ── buttons ── */
+.btn-pickup{width:100%;padding:16px;border:none;border-radius:14px;font-family:var(--font-head);font-size:1rem;font-weight:700;cursor:pointer;transition:all .2s;margin-top:12px}
+.btn-pickup.active{background:linear-gradient(135deg,var(--gold),#e09100);color:#07050f;box-shadow:0 4px 20px var(--gold-dim)}
+.btn-pickup.active:active{transform:scale(.97)}
+.btn-pickup.done{background:var(--green-dim);color:var(--green);cursor:default}
+.btn-pickup:disabled{opacity:.7;cursor:not-allowed}
+.btn-next{width:100%;padding:14px;background:transparent;border:1.5px solid #2a2548;border-radius:14px;color:var(--text);font-family:var(--font-head);font-size:.9rem;font-weight:600;cursor:pointer;margin-top:8px;transition:all .2s}
+.btn-next:hover{border-color:var(--purple);color:var(--purple-light)}
+.btn-next:active{transform:scale(.97)}
+
+/* ── toast ── */
+.toast-container{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:999;display:flex;flex-direction:column;gap:8px;width:90%;max-width:400px;pointer-events:none}
+.toast{padding:12px 16px;border-radius:12px;font-size:.75rem;font-family:var(--font-mono);animation:toastIn .3s ease-out;pointer-events:auto;display:flex;align-items:center;gap:8px}
+.toast.success{background:#15372a;border:1px solid #22c55e44;color:var(--green)}
+.toast.error{background:#351515;border:1px solid #ef444444;color:var(--red)}
+.toast.info{background:#1a1535;border:1px solid #7c3aed44;color:var(--purple-light)}
+.toast.out{animation:toastOut .3s ease-in forwards}
+@keyframes toastIn{from{opacity:0;transform:translateY(-12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes toastOut{to{opacity:0;transform:translateY(-12px)}}
+
+/* ── footer ── */
+.footer{text-align:center;padding:16px 0;font-size:.55rem;color:#3a3558;margin-top:auto}
+
+/* ── loading ── */
+.spinner{width:20px;height:20px;border:2px solid transparent;border-top-color:currentColor;border-radius:50%;animation:spin .6s linear infinite;display:inline-block;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── responsive ── */
+@media(max-width:380px){.logo{font-size:1.25rem}.stat-num{font-size:1.2rem}}
+</style>
+</head>
+<body>
+<div class="stars"></div><div class="stars2"></div><div class="stars3"></div>
+<div class="toast-container" id="toastBox"></div>
+<div class="container">
+  <div class="header">
+    <div class="logo">HackHayward 2026</div>
+    <div class="subtitle">Omi AI Wearable Pickup Scanner</div>
+  </div>
+
+  <!-- PASSWORD SCREEN -->
+  <div class="screen active" id="screenPw">
+    <div class="lock-icon">🔒</div>
+    <div class="pw-title">Staff Access</div>
+    <div class="pw-sub">Enter the staff password to access the scanner</div>
+    <input class="pw-input" id="pwInput" type="password" placeholder="Enter password" autocomplete="off">
+    <button class="pw-btn" id="pwBtn" onclick="checkPassword()">Unlock Scanner</button>
+  </div>
+
+  <!-- SCANNER SCREEN -->
+  <div class="screen" id="screenScan">
+    <div class="stats-bar">
+      <div class="stat"><div class="stat-num purple" id="statRegistered">-</div><div class="stat-label">Registered</div></div>
+      <div class="stat"><div class="stat-num gold" id="statScanned">0</div><div class="stat-label">Scanned</div></div>
+      <div class="stat"><div class="stat-num green" id="statPicked">-</div><div class="stat-label">Picked Up</div></div>
+    </div>
+    <div class="scanner-wrap" id="scannerWrap">
+      <div id="reader"></div>
+      <div class="viewfinder">
+        <div class="vf-corner tl"></div><div class="vf-corner tr"></div>
+        <div class="vf-corner bl"></div><div class="vf-corner br"></div>
+      </div>
+      <div class="scan-line" id="scanLine"></div>
+    </div>
+    <div class="scan-label" id="scanLabel">Point camera at participant QR code</div>
+
+    <div class="card-wrap" id="cardWrap">
+      <div class="card">
+        <div class="card-top">
+          <div class="avatar" id="avatar">??</div>
+          <div>
+            <div class="card-name" id="cardName">—</div>
+            <div class="card-uni" id="cardUni">—</div>
+          </div>
+        </div>
+        <div class="card-fields">
+          <div class="field"><span class="field-label">Email</span><span class="field-value" id="cardEmail">—</span></div>
+          <div class="field"><span class="field-label">Devpost</span><span class="field-value" id="cardDevpost">—</span></div>
+          <div class="field"><span class="field-label">Team</span><span class="field-value" id="cardTeam">—</span></div>
+          <div class="field"><span class="field-label">Status</span><span id="cardStatus"><span class="status-badge pending"><span class="dot"></span> Pending Pickup</span></span></div>
+        </div>
+        <button class="btn-pickup active" id="btnPickup" onclick="markPickup()">Mark as Picked Up</button>
+      </div>
+      <button class="btn-next" id="btnNext" onclick="scanNext()">↻ Scan Next Person</button>
+    </div>
+    <div class="footer">HackHayward 2026 · Omi AI Device Pickup</div>
+  </div>
+</div>
+
+<script>
+// ── STATE ──
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzyiPXDSBIh0xjz_go1Na2MeTNlxcX5bVUijWtYpeE01O1WGU1dEk-B5-UqmwL8hSLM2Q/exec';
+let sessionScanned = 0;
+let currentParticipant = null;
+let html5QrCode = null;
+let scannerRunning = false;
+
+// ── PASSWORD ──
+const PASS = 'hackhayward2026';
+document.getElementById('pwInput').addEventListener('keydown', e => { if (e.key === 'Enter') checkPassword(); });
+
+function checkPassword() {
+  const inp = document.getElementById('pwInput');
+  if (inp.value === PASS) {
+    show('screenPw', false);
+    show('screenScan', true);
+    startScanner();
+    loadStats();
+  } else {
+    inp.classList.add('error');
+    toast('Incorrect password', 'error');
+    setTimeout(() => inp.classList.remove('error'), 400);
+  }
+}
+
+// ── HELPERS ──
+function show(id, visible) {
+  document.getElementById(id).classList.toggle('active', visible);
+}
+
+function toast(msg, type = 'info') {
+  const box = document.getElementById('toastBox');
+  const el = document.createElement('div');
+  const icons = { success: '✓', error: '✗', info: 'ℹ' };
+  el.className = `toast ${type}`;
+  el.innerHTML = `<span>${icons[type] || ''}</span><span>${msg}</span>`;
+  box.appendChild(el);
+  setTimeout(() => { el.classList.add('out'); setTimeout(() => el.remove(), 300); }, 3000);
+}
+
+// ── SCANNER (html5-qrcode) ──
+function startScanner() {
+  if (scannerRunning) return;
+
+  html5QrCode = new Html5Qrcode("reader");
+
+  const config = {
+    fps: 30,
+    qrbox: function(viewfinderWidth, viewfinderHeight) {
+      const size = Math.min(viewfinderWidth, viewfinderHeight) * 0.8;
+      return { width: size, height: size };
+    },
+    aspectRatio: 1.0,
+    disableFlip: true,
+    formatsToSupport: [Html5QrcodeSupportedFormats.QR_CODE],
+    experimentalFeatures: { useBarCodeDetectorIfSupported: true }
+  };
+
+  html5QrCode.start(
+    { facingMode: "environment" },
+    config,
+    onScanSuccess,
+    onScanFailure
+  ).then(() => {
+    scannerRunning = true;
+    toast('Camera ready — point at a QR code', 'success');
+    document.getElementById('scanLabel').textContent = 'Scanning... point at QR code';
+    console.log('Scanner started successfully');
+  }).catch(err => {
+    console.error('Scanner start error:', err);
+    // Try with user-facing camera as fallback
+    html5QrCode.start(
+      { facingMode: "user" },
+      config,
+      onScanSuccess,
+      onScanFailure
+    ).then(() => {
+      scannerRunning = true;
+      toast('Using front camera', 'info');
+      document.getElementById('scanLabel').textContent = 'Scanning... point at QR code';
+    }).catch(err2 => {
+      console.error('Both cameras failed:', err2);
+      toast('Camera access denied. Allow camera permission and refresh.', 'error');
+      document.getElementById('scanLabel').textContent = 'Camera access required — refresh to retry';
+    });
+  });
+}
+
+function stopScanner() {
+  if (html5QrCode && scannerRunning) {
+    html5QrCode.stop().then(() => {
+      scannerRunning = false;
+      console.log('Scanner stopped');
+    }).catch(err => {
+      console.error('Stop error:', err);
+      scannerRunning = false;
+    });
+  }
+}
+
+function onScanSuccess(decodedText, decodedResult) {
+  console.log('QR detected:', decodedText);
+  // Stop scanning while we process
+  if (html5QrCode && scannerRunning) {
+    html5QrCode.pause(true);
+  }
+  handleScan(decodedText);
+}
+
+function onScanFailure(error) {
+  // Silence — this fires every frame when no QR is found
+}
+
+// ── SCAN HANDLER ──
+async function handleScan(data) {
+  document.getElementById('scanLine').style.animationPlayState = 'paused';
+  document.getElementById('scanLabel').textContent = 'Verifying...';
+
+  if (!data.includes('HACKHAYWARD2026')) {
+    toast('Invalid QR code — not a HackHayward registration', 'error');
+    document.getElementById('scanLabel').textContent = 'Invalid QR code';
+    setTimeout(() => scanNext(), 2500);
+    return;
+  }
+
+  let parsed;
+  try {
+    parsed = parseQR(data);
+    console.log('Parsed QR:', parsed);
+  } catch (e) {
+    console.error('Parse error:', e);
+    toast('Could not parse QR code data', 'error');
+    setTimeout(() => scanNext(), 2000);
+    return;
+  }
+
+  try {
+    document.getElementById('scanLabel').textContent = 'Checking registration...';
+    const res = await fetchSheet('verify', { email: parsed.email });
+    console.log('Verify response:', res);
+
+    if (!res.found) {
+      toast('Participant not found in registration sheet', 'error');
+      document.getElementById('scanLabel').textContent = 'Not registered';
+      setTimeout(() => scanNext(), 2500);
+      return;
+    }
+
+    currentParticipant = parsed;
+    sessionScanned++;
+    document.getElementById('statScanned').textContent = sessionScanned;
+    showCard(parsed, res.pickedUp);
+
+  } catch (err) {
+    console.error('Verify error:', err);
+    toast('Could not verify — check your connection', 'error');
+    document.getElementById('scanLabel').textContent = 'Verification failed';
+    setTimeout(() => scanNext(), 2500);
+  }
+}
+
+function parseQR(data) {
+  const parts = data.split('|').map(s => s.trim());
+  const get = label => {
+    const p = parts.find(x => x.toLowerCase().startsWith(label.toLowerCase()));
+    return p ? p.split(':').slice(1).join(':').trim() : '—';
+  };
+  return {
+    name: get('Name'),
+    email: get('Email'),
+    university: get('University'),
+    devpost: get('Devpost'),
+    team: get('Team')
+  };
+}
+
+// ── DISPLAY CARD ──
+function showCard(p, alreadyPicked) {
+  const initials = p.name.split(' ').filter(w => w).map(w => w[0]).join('').toUpperCase().slice(0, 2) || '??';
+  document.getElementById('avatar').textContent = initials;
+  document.getElementById('cardName').textContent = p.name;
+  document.getElementById('cardUni').textContent = p.university;
+  document.getElementById('cardEmail').textContent = p.email;
+  document.getElementById('cardDevpost').textContent = p.devpost;
+  document.getElementById('cardTeam').textContent = p.team;
+
+  const btn = document.getElementById('btnPickup');
+  if (alreadyPicked) {
+    document.getElementById('cardStatus').innerHTML = '<span class="status-badge picked"><span class="dot"></span> Picked Up</span>';
+    btn.className = 'btn-pickup done';
+    btn.textContent = '✓ Already Picked Up';
+    btn.disabled = true;
+    toast('This participant already picked up their device', 'info');
+  } else {
+    document.getElementById('cardStatus').innerHTML = '<span class="status-badge pending"><span class="dot"></span> Pending Pickup</span>';
+    btn.className = 'btn-pickup active';
+    btn.textContent = 'Mark as Picked Up';
+    btn.disabled = false;
+  }
+
+  document.getElementById('cardWrap').classList.add('show');
+  document.getElementById('scanLabel').textContent = 'Participant found';
+}
+
+// ── MARK PICKUP ──
+async function markPickup() {
+  const btn = document.getElementById('btnPickup');
+  if (!currentParticipant || btn.disabled) return;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Saving...';
+
+  try {
+    const res = await fetchSheet('pickup', { email: currentParticipant.email });
+    console.log('Pickup response:', res);
+    btn.className = 'btn-pickup done';
+    btn.textContent = '✓ Picked Up';
+    document.getElementById('cardStatus').innerHTML = '<span class="status-badge picked"><span class="dot"></span> Picked Up</span>';
+    toast(`${currentParticipant.name} marked as picked up!`, 'success');
+    loadStats();
+  } catch (err) {
+    console.error('Pickup error:', err);
+    btn.className = 'btn-pickup active';
+    btn.textContent = 'Mark as Picked Up';
+    btn.disabled = false;
+    toast('Failed to save — try again', 'error');
+  }
+}
+
+// ── SCAN NEXT ──
+function scanNext() {
+  currentParticipant = null;
+  document.getElementById('cardWrap').classList.remove('show');
+  document.getElementById('scanLine').style.animationPlayState = 'running';
+  document.getElementById('scanLabel').textContent = 'Scanning... point at QR code';
+
+  // Resume scanning
+  if (html5QrCode && scannerRunning) {
+    try {
+      html5QrCode.resume();
+    } catch (e) {
+      // If resume fails, restart
+      stopScanner();
+      setTimeout(startScanner, 500);
+    }
+  } else {
+    startScanner();
+  }
+}
+
+// ── GOOGLE SHEET API ──
+async function fetchSheet(action, params = {}) {
+  const url = new URL(SCRIPT_URL);
+  url.searchParams.set('action', action);
+  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+
+  console.log('Fetching:', url.toString());
+
+  const res = await fetch(url.toString(), { method: 'GET', redirect: 'follow' });
+
+  if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+
+  const text = await res.text();
+  console.log('Raw response:', text.substring(0, 200));
+
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    console.error('JSON parse error:', text.substring(0, 500));
+    throw new Error('Invalid response from server');
+  }
+}
+
+async function loadStats() {
+  try {
+    const data = await fetchSheet('stats');
+    document.getElementById('statRegistered').textContent = data.registered || 0;
+    document.getElementById('statPicked').textContent = data.pickedUp || 0;
+  } catch (e) {
+    console.error('Stats error:', e);
+  }
+}
+</script>
+</body>
+</html>
